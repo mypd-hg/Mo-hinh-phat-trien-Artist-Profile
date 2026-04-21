@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Artist Profile — Mô hình Nhạc tốt ↔ Profile tốt</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #fafafa;
+    color: #1d1d1f;
+    padding: 40px 30px;
+    min-height: 100vh;
+  }
+  .page-title {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .page-title h1 {
+    font-size: 22px;
+    color: #333;
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+  .page-title .subtitle {
+    font-size: 13px;
+    color: #888;
+  }
+
+  .board {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr 60px 1fr;
+    gap: 0;
+    align-items: start;
+  }
+
+  .col-header {
+    border-radius: 6px;
+    padding: 14px 20px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+  .col-header.music { background: #fce4ec; color: #880e4f;}
+  .col-header.center { background: #fff9c4; color: #6d4c00;}
+  .col-header.profile { background: #e3f2fd; color: #0d47a1;}
+
+  .arrow-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 15px;
+    font-size: 28px;
+    color: #555;
+  }
+
+  .col-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .item {
+    background: white;
+    border-radius: 8px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #eee;
+    font-size: 14px;
+    line-height: 1.4;
+    position: relative;
+  }
+  .item:hover {
+    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+    transform: translateX(2px);
+  }
+  .item .item-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .item .toggle {
+    color: #bbb;
+    font-size: 16px;
+    transition: transform 0.2s;
+    margin-left: 8px;
+  }
+  .item.expanded .toggle {
+    transform: rotate(90deg);
+    color: #c2185b;
+  }
+
+  .details {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, padding 0.25s;
+    padding: 0;
+  }
+  .item.expanded .details {
+    max-height: 400px;
+    padding: 12px 0 4px 0;
+    border-top: 1px dashed #eee;
+    margin-top: 10px;
+  }
+  .sub-list {
+    list-style: none;
+    padding: 0;
+  }
+  .sub-list li {
+    font-size: 13px;
+    color: #555;
+    padding: 6px 0 6px 20px;
+    position: relative;
+    line-height: 1.45;
+  }
+  .sub-list li::before {
+    content: "›";
+    position: absolute;
+    left: 6px;
+    color: #c2185b;
+    font-weight: bold;
+  }
+  .sub-list li strong { color: #333;}
+  .sub-list li .note {
+    display: inline-block;
+    background: #fff3e0;
+    color: #ef6c00;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 5px;
+  }
+
+  .item.music { border-left: 4px solid #e91e63;}
+  .item.center { border-left: 4px solid #fdd835;}
+  .item.profile { border-left: 4px solid #2196f3;}
+
+  .footer-principle {
+    max-width: 1200px;
+    margin: 40px auto 0;
+    background: linear-gradient(90deg, #c2185b, #f06292);
+    color: white;
+    padding: 14px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 3px;
+    font-size: 15px;
+  }
+
+  .controls {
+    text-align: center;
+    margin-top: 25px;
+  }
+  .btn {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #555;
+    margin: 0 4px;
+  }
+  .btn:hover {
+    background: #f5f5f7;
+    border-color: #c2185b;
+    color: #c2185b;
+  }
+
+  .hint {
+    text-align: center;
+    font-size: 12px;
+    color: #aaa;
+    margin-top: 10px;
+  }
+
+  @media (max-width: 900px) {
+    .board {
+      grid-template-columns: 1fr;
+    }
+    .arrow-wrap { transform: rotate(90deg); padding: 10px;}
+  }
+
+  /* Edit mode */
+  .edit-bar {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    background: white;
+    border-radius: 10px;
+    padding: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    display: flex;
+    gap: 6px;
+    z-index: 100;
+    align-items: center;
+  }
+  .edit-bar .status {
+    font-size: 12px;
+    color: #888;
+    padding: 0 8px;
+  }
+  .edit-bar button {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #444;
+    font-weight: 600;
+  }
+  .edit-bar button:hover {
+    border-color: #c2185b;
+    color: #c2185b;
+  }
+  .edit-bar button.primary {
+    background: #c2185b;
+    color: white;
+    border-color: #c2185b;
+  }
+  .edit-bar button.primary:hover {
+    background: #ad1457;
+  }
+  .edit-bar button.danger {
+    color: #d32f2f;
+    border-color: #ffcdd2;
+  }
+
+  body.editing [contenteditable="true"] {
+    outline: 1px dashed #c2185b;
+    outline-offset: 2px;
+    background: #fff8fc;
+    border-radius: 4px;
+    padding: 2px 4px;
+  }
+  body.editing [contenteditable="true"]:focus {
+    outline: 2px solid #c2185b;
+    background: #fff;
+  }
+  .delete-btn, .add-btn, .add-sub-btn {
+    display: none;
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    color: #999;
+    margin-left: 6px;
+  }
+  .delete-btn:hover { color: #d32f2f; border-color: #d32f2f;}
+  .add-btn, .add-sub-btn {
+    width: 100%;
+    text-align: center;
+    padding: 8px;
+    margin-top: 8px;
+    color: #c2185b;
+    border: 1px dashed #e91e63;
+    background: #fff0f6;
+  }
+  .add-btn:hover, .add-sub-btn:hover { background: #ffe6ef;}
+  .add-sub-btn { font-size: 11px; padding: 4px;}
+
+  body.editing .delete-btn,
+  body.editing .add-btn,
+  body.editing .add-sub-btn { display: inline-block;}
+  body.editing .item { cursor: default;}
+
+  .saved-note {
+    position: fixed;
+    bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    background: #43a047;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 200;
+  }
+  .saved-note.show { opacity: 1;}
+</style>
+</head>
+<body>
+
+<div class="edit-bar">
+  <span class="status" id="editStatus">Xem</span>
+  <button id="toggleEdit" onclick="toggleEdit()">✏️ Chỉnh sửa</button>
+  <button class="primary" onclick="downloadFile()" title="Tải xuống file HTML đã sửa">💾 Tải xuống</button>
+</div>
+
+<div class="saved-note" id="savedNote">Đã lưu thay đổi vào bộ nhớ trình duyệt</div>
+
+<div class="page-title">
+  <h1>MÔ HÌNH XÂY DỰNG & KHAI THÁC ARTIST PROFILE</h1>
+  <div class="subtitle">MLO × Performance · 16/04/2026 · Click vào từng mục để xem chi tiết</div>
+</div>
+
+<div class="board">
+
+  <!-- COLUMN 1: NHẠC TỐT -->
+  <div>
+    <div class="col-header music">NHẠC TỐT</div>
+    <div class="col-items">
+
+      <div class="item music" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Đúng genre</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li><strong>Metadata</strong> — tag genre, mood, tempo, key chuẩn</li>
+            <li><strong>Kho</strong> — đúng kho sản xuất của label/alias</li>
+            <li><strong>Brief</strong> — đúng yêu cầu sản xuất ban đầu</li>
+            <li><strong>Phong cách nghệ sĩ</strong> <span class="note">cần định nghĩa</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="item music" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Thời lượng phù hợp</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li>Độ dài tối ưu theo từng genre</li>
+            <li>Phù hợp platform (Spotify, YouTube, TikTok)</li>
+            <li>Đảm bảo streams đủ tính phí (≥30s)</li>
+            <li>Giữ completion rate cao</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="item music" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Chất lượng sản xuất</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li><strong>Hậu kỳ tốt</strong> — mix/master đạt chuẩn</li>
+            <li><strong>Chỉn chu</strong> — hoàn thiện toàn bộ</li>
+            <li><strong>Điểm sản xuất</strong> <span class="note">cần định nghĩa thang điểm</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="item music" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Nguồn sản xuất</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li><strong>SXN</strong> — sản xuất truyền thống</li>
+            <li><strong>AI / MLO</strong> — sản xuất bằng AI → nguồn nhạc</li>
+            <li><strong>Label — chủ động order</strong></li>
+            <li>Các thương hiệu khác</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="arrow-wrap">→</div>
+
+  <!-- COLUMN 2: TỐT (indicators) -->
+  <div>
+    <div class="col-header center">CHỈ SỐ "TỐT"</div>
+    <div class="col-items">
+
+      <div class="item center" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Programmed Listener</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li><strong>Playlist</strong> — editorial + user/listener playlist</li>
+            <li><strong>Thuật toán</strong> — Discovery Weekly, Release Radar <span class="note">cần hiểu sâu</span></li>
+            <li>Tỷ lệ programmed / total listeners</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="item center" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Monthly Listeners</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li>Người nghe duy nhất trong 28 ngày</li>
+            <li>Growth MoM — đà tăng trưởng</li>
+            <li>Chỉ số nền tảng coi trọng nhất</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="item center" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Top Song Performance → Hit?</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li>Streams 30/60 ngày đầu</li>
+            <li>Save rate, completion rate</li>
+            <li>Virality signals</li>
+            <li><strong>Định nghĩa "bài hit"</strong> <span class="note">cần thống nhất ngưỡng</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="item center" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Chỉ số phụ trợ</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li><strong>Followers</strong> — lượng theo dõi</li>
+            <li><strong>Playlist adds</strong> — listener playlist</li>
+            <li><strong>Pre-save</strong> — signal trước release</li>
+            <li><strong>Active listeners ratio</strong> — độ gắn bó</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="arrow-wrap">←</div>
+
+  <!-- COLUMN 3: PROFILE TỐT -->
+  <div>
+    <div class="col-header profile">PROFILE TỐT</div>
+    <div class="col-items">
+
+      <div class="item profile" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Giao diện "Legit"</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li>Avatar, banner, bio đầy đủ & chuyên nghiệp</li>
+            <li>Liên kết mạng xã hội</li>
+            <li>Canvas, Artist Pick, About, Gallery</li>
+            <li>Tối ưu <strong>Quality Score</strong> của nền tảng</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="item profile" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Monthly Listeners cao & tăng trưởng</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li>ML cao và ổn định</li>
+            <li>Đà tăng trưởng MoM tích cực</li>
+            <li>Phân loại: high / mid / low</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="item profile" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Thuộc diện "Chủ động nuôi"</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li><strong>Project đang phát triển</strong> — ưu tiên chiến lược</li>
+            <li><strong>Đà tăng trưởng</strong> — đang có momentum</li>
+            <li><strong>Reports định kỳ</strong> — theo dõi sát sao</li>
+            <li>Phân bổ nguồn lực rõ ràng</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="item profile" onclick="toggle(this)">
+        <div class="item-title"><span contenteditable="false">Lịch phát hành phù hợp</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list">
+            <li><strong>Quy hoạch</strong> — release calendar theo quý</li>
+            <li><strong>Tần suất</strong> — đều đặn, lịch cố định</li>
+            <li>Phù hợp capacity sản xuất</li>
+            <li>Tác động tích cực Release Radar</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="controls">
+  <button class="btn" onclick="expandAll()">Mở rộng tất cả</button>
+  <button class="btn" onclick="collapseAll()">Thu gọn tất cả</button>
+</div>
+<div class="hint">💡 Click vào mỗi mục để xem chi tiết break-out</div>
+
+<div class="footer-principle">BIẾT &nbsp; — &nbsp; HIỂU &nbsp; — &nbsp; TẬN DỤNG &nbsp;&nbsp; ARTIST PROFILES</div>
+
+<script>
+let editMode = false;
+
+function toggle(el) {
+  if (editMode) return; // Disable toggle while editing
+  el.classList.toggle('expanded');
+}
+function expandAll() {
+  document.querySelectorAll('.item').forEach(i => i.classList.add('expanded'));
+}
+function collapseAll() {
+  document.querySelectorAll('.item').forEach(i => i.classList.remove('expanded'));
+}
+
+function toggleEdit() {
+  editMode = !editMode;
+  document.body.classList.toggle('editing', editMode);
+  const btn = document.getElementById('toggleEdit');
+  const status = document.getElementById('editStatus');
+  if (editMode) {
+    btn.textContent = '✓ Xong';
+    btn.classList.add('primary');
+    status.textContent = 'Đang chỉnh sửa';
+    status.style.color = '#c2185b';
+    enableEditing();
+    expandAll();
+    addEditControls();
+  } else {
+    btn.textContent = '✏️ Chỉnh sửa';
+    btn.classList.remove('primary');
+    status.textContent = 'Xem';
+    status.style.color = '#888';
+    disableEditing();
+    removeEditControls();
+    saveToLocal();
+  }
+}
+
+function enableEditing() {
+  document.querySelectorAll('.col-header, .item-title span:first-child, .sub-list li, .page-title h1, .page-title .subtitle').forEach(el => {
+    el.setAttribute('contenteditable', 'true');
+  });
+}
+function disableEditing() {
+  document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+    el.setAttribute('contenteditable', 'false');
+  });
+}
+
+function addEditControls() {
+  // Add delete buttons to items
+  document.querySelectorAll('.item').forEach(item => {
+    if (item.querySelector('.delete-btn')) return;
+    const titleRow = item.querySelector('.item-title');
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.textContent = '🗑 Xóa';
+    delBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (confirm('Xóa mục này?')) item.remove();
+    };
+    titleRow.appendChild(delBtn);
+  });
+
+  // Add delete buttons to sub-list items
+  document.querySelectorAll('.sub-list li').forEach(li => {
+    if (li.querySelector('.delete-btn')) return;
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.textContent = '×';
+    delBtn.style.padding = '0 6px';
+    delBtn.onclick = (e) => {
+      e.stopPropagation();
+      li.remove();
+    };
+    li.appendChild(delBtn);
+  });
+
+  // Add "Add sub-item" button to each details section
+  document.querySelectorAll('.details').forEach(details => {
+    if (details.querySelector('.add-sub-btn')) return;
+    const ul = details.querySelector('.sub-list');
+    if (!ul) return;
+    const btn = document.createElement('button');
+    btn.className = 'add-sub-btn';
+    btn.textContent = '+ Thêm chi tiết';
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const li = document.createElement('li');
+      li.setAttribute('contenteditable', 'true');
+      li.textContent = 'Nội dung mới';
+      ul.appendChild(li);
+      li.focus();
+      // Select all text
+      const range = document.createRange();
+      range.selectNodeContents(li);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      // Add delete button
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-btn';
+      delBtn.textContent = '×';
+      delBtn.style.padding = '0 6px';
+      delBtn.onclick = (ev) => { ev.stopPropagation(); li.remove(); };
+      li.appendChild(delBtn);
+    };
+    details.appendChild(btn);
+  });
+
+  // Add "Add new item" button to each column
+  document.querySelectorAll('.col-items').forEach(col => {
+    if (col.querySelector('.add-btn')) return;
+    const colEl = col.closest('div').querySelector('.col-header');
+    const typeClass = colEl.classList.contains('music') ? 'music' :
+                      colEl.classList.contains('center') ? 'center' : 'profile';
+    const btn = document.createElement('button');
+    btn.className = 'add-btn';
+    btn.textContent = '+ Thêm mục mới';
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const div = document.createElement('div');
+      div.className = 'item ' + typeClass + ' expanded';
+      div.onclick = function() { toggle(this); };
+      div.innerHTML = `
+        <div class="item-title"><span contenteditable="true">Mục mới</span><span class="toggle">›</span></div>
+        <div class="details">
+          <ul class="sub-list"><li contenteditable="true">Chi tiết...</li></ul>
+        </div>
+      `;
+      col.appendChild(div);
+      // Re-add edit controls for the new item
+      addEditControls();
+      // Focus the title
+      const title = div.querySelector('.item-title span');
+      title.focus();
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    };
+    col.appendChild(btn);
+  });
+}
+
+function removeEditControls() {
+  document.querySelectorAll('.delete-btn, .add-btn, .add-sub-btn').forEach(b => b.remove());
+}
+
+function saveToLocal() {
+  try {
+    const content = document.querySelector('.board').innerHTML;
+    localStorage.setItem('artist_profile_content', content);
+    const title = document.querySelector('.page-title').innerHTML;
+    localStorage.setItem('artist_profile_title', title);
+    showSavedNote();
+  } catch (e) {
+    console.log('Cannot save to localStorage', e);
+  }
+}
+
+function loadFromLocal() {
+  try {
+    const content = localStorage.getItem('artist_profile_content');
+    const title = localStorage.getItem('artist_profile_title');
+    if (content) document.querySelector('.board').innerHTML = content;
+    if (title) document.querySelector('.page-title').innerHTML = title;
+  } catch (e) {
+    console.log('Cannot load from localStorage', e);
+  }
+}
+
+function showSavedNote() {
+  const note = document.getElementById('savedNote');
+  note.classList.add('show');
+  setTimeout(() => note.classList.remove('show'), 1800);
+}
+
+function downloadFile() {
+  // Turn off edit mode first to clean up
+  if (editMode) toggleEdit();
+
+  const html = '<!DOCTYPE html>\n<html lang="vi">\n<head>\n' +
+    document.head.innerHTML +
+    '\n</head>\n<body>\n' +
+    document.body.innerHTML +
+    '\n</body>\n</html>';
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const now = new Date();
+  const ts = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0')
+    + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+  a.download = 'Artist_Profile_MindMap_' + ts + '.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Load saved content on page load
+window.addEventListener('DOMContentLoaded', loadFromLocal);
+</script>
+
+</body>
+</html>
